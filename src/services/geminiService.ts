@@ -1,0 +1,83 @@
+import { GoogleGenAI, Type } from "@google/genai";
+import { ImageMetadata } from "../types";
+
+const METADATA_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    file_name: { type: Type.STRING },
+    title: { type: Type.STRING },
+    description: { type: Type.STRING },
+    keywords: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING }
+    },
+    category: { type: Type.STRING },
+    dominant_colors: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING }
+    },
+    objects_detected: {
+      type: Type.ARRAY,
+      items: { type: Type.STRING }
+    },
+    mood: { type: Type.STRING },
+    usage_suggestions: { type: Type.STRING }
+  },
+  required: [
+    "file_name", "title", "description", "keywords", "category", 
+    "dominant_colors", "objects_detected", "mood", "usage_suggestions"
+  ]
+};
+
+export async function analyzeImage(file: File, customApiKey?: string): Promise<ImageMetadata> {
+  const apiKey = customApiKey || process.env.GEMINI_API_KEY || "";
+  
+  if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
+    throw new Error("Gemini API Key is missing. Please add it in Settings.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+  const base64Data = await fileToBase64(file);
+  const mimeType = file.type;
+
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: {
+      parts: [
+        {
+          inlineData: {
+            mimeType,
+            data: base64Data.split(',')[1],
+          },
+        },
+        {
+          text: "You are an AI image metadata generator. Analyze this image and return structured JSON metadata. Ensure keywords are 10-20 SEO tags. Description should be max 50 words.",
+        },
+      ],
+    },
+    config: {
+      responseMimeType: "application/json",
+      responseSchema: METADATA_SCHEMA,
+    },
+  });
+
+  if (!response.text) {
+    throw new Error("No response from AI");
+  }
+
+  try {
+    return JSON.parse(response.text) as ImageMetadata;
+  } catch (e) {
+    console.error("Failed to parse AI response:", response.text);
+    throw new Error("Invalid metadata format returned by AI");
+  }
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+}
