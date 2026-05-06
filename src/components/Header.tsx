@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, Github, Info, Settings, LogIn, LogOut, User } from 'lucide-react';
+import { Camera, Facebook, Info, Settings, LogIn, LogOut, User } from 'lucide-react';
 import { motion } from 'motion/react';
 import { auth, signInWithGoogle, logout } from '../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -84,10 +84,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
             </button>
           )}
 
-          <button className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm hover:bg-white/10 transition-colors">
-            <Github className="w-4 h-4" />
-            GitHub
-          </button>
+          <a 
+            href="https://www.facebook.com/share/1Gp3obVFo7/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm hover:bg-[#1877F2]/20 hover:border-[#1877F2]/50 hover:text-[#1877F2] transition-all"
+          >
+            <Facebook className="w-4 h-4 fill-current" />
+            Facebook
+          </a>
         </div>
       </div>
     </header>

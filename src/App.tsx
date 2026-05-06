@@ -5,6 +5,7 @@ import { ImageGrid } from './components/ImageGrid';
 import { MetadataDisplay } from './components/MetadataDisplay';
 import { SettingsModal } from './components/SettingsModal';
 import { AdBanner } from './components/AdBanner';
+import { Footer } from './components/Footer';
 import { UploadedFile, ImageMetadata } from './types';
 import { analyzeImage } from './services/geminiService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -482,6 +483,7 @@ export default function App() {
       </main>
 
       <AdBanner />
+      <Footer />
 
       {/* Futuristic Background Particles (CSS only) */}
       <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden">
