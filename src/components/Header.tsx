@@ -35,8 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ user, userProfile, onOpenSetting
 
         <nav className="flex items-center gap-3 sm:gap-8 text-[10px] sm:text-sm font-bold uppercase tracking-widest text-gray-400">
           <a href="#" className="hover:text-cyan-400 transition-colors hidden sm:block">Home</a>
-          <a href="#" className="hover:text-cyan-400 transition-colors">Tools</a>
-          <a href="#" className="hover:text-cyan-400 transition-colors hidden sm:block">Archive</a>
+          <a href="#" className="hover:text-cyan-400 transition-colors">About Us</a>
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-4">
