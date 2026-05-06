@@ -36,7 +36,7 @@ service cloud.firestore {
       return data.keys().hasAll(['uid', 'email', 'role'])
         && data.uid == request.auth.uid
         && data.role in ['admin', 'user']
-        && (data.role == 'user' || data.email == 'sajewel132@gmail.com');
+        && (data.role == 'user' || data.email == 'sajewel132@gmail.com' || data.uid == 'HI7LPBRcuLMRpk8D2i4WJLlT00n2');
     }
 
     // Users Collection

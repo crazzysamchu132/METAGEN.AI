@@ -312,6 +312,8 @@ export default function App() {
   return (
     <div className="min-h-screen pb-20">
       <Header 
+        user={currentUser}
+        userProfile={userProfile}
         onOpenSettings={() => setIsSettingsOpen(true)} 
         onOpenAdmin={() => setIsAdminOpen(true)}
       />

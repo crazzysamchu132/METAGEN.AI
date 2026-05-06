@@ -1,24 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Camera, Facebook, Info, Settings, LogIn, LogOut, User, Shield } from 'lucide-react';
 import { motion } from 'motion/react';
-import { auth, signInWithGoogle, logout, ADMIN_EMAIL, ADMIN_UID } from '../lib/firebase';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { signInWithGoogle, logout, ADMIN_EMAIL, ADMIN_UID } from '../lib/firebase';
+import { User as FirebaseUser } from 'firebase/auth';
+import { UserProfile } from '../types';
 
 interface HeaderProps {
+  user: FirebaseUser | null;
+  userProfile: UserProfile | null;
   onOpenSettings: () => void;
   onOpenAdmin: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenAdmin }) => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-
-  useEffect(() => {
-    return onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
-  }, []);
-
-  const isAdmin = user?.email === ADMIN_EMAIL || user?.uid === ADMIN_UID;
+export const Header: React.FC<HeaderProps> = ({ user, userProfile, onOpenSettings, onOpenAdmin }) => {
+  const isAdmin = user?.email === ADMIN_EMAIL || 
+                  user?.uid === ADMIN_UID || 
+                  userProfile?.role === 'admin';
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/50 backdrop-blur-md">
