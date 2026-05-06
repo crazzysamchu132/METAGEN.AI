@@ -30,8 +30,50 @@ export const MetadataDisplay: React.FC<MetadataDisplayProps> = ({ files }) => {
     link.click();
   };
 
+  const downloadAdobeStockCSV = (filesToExport: UploadedFile[]) => {
+    const headers = ["Filename", "Title", "Keywords"];
+    const rows = filesToExport.map(file => {
+      const m = file.metadata;
+      if (!m) return null;
+      // Keywords should be comma-separated for Adobe Stock
+      const keywordsString = m.keywords.join(', ');
+      return [
+        m.file_name,
+        `"${m.title.replace(/"/g, '""')}"`, // Escape quotes for CSV
+        `"${keywordsString.replace(/"/g, '""')}"`
+      ].join(',');
+    }).filter(Boolean);
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `adobe_stock_metadata_${new Date().getTime()}.csv`;
+    link.click();
+  };
+
+  const copyKeywordsAsCSV = (keywords: string[], id: string) => {
+    copyToClipboard(keywords.join(', '), id);
+  };
+
+  const downloadOneCSV = (file: UploadedFile) => {
+    downloadAdobeStockCSV([file]);
+  };
+
   return (
     <div className="space-y-4">
+      {files.some(f => f.metadata) && (
+        <div className="flex justify-end mb-4">
+          <button 
+            onClick={() => downloadAdobeStockCSV(files)}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:border-cyan-500/50 hover:bg-cyan-500/10 text-xs font-bold uppercase tracking-widest text-cyan-400 rounded-xl transition-all"
+          >
+            <Download className="w-4 h-4" />
+            Bulk Export (Adobe Stock CSV)
+          </button>
+        </div>
+      )}
       {files.map((file) => {
         if (!file.metadata) return null;
         const isExpanded = expandedId === file.id;
@@ -70,11 +112,12 @@ export const MetadataDisplay: React.FC<MetadataDisplayProps> = ({ files }) => {
 
               <div className="flex items-center gap-2">
                 <button 
-                  onClick={(e) => { e.stopPropagation(); downloadOneJSON(m); }}
-                  className="p-2 text-gray-400 hover:text-white transition-colors"
-                  title="Download JSON"
+                  onClick={(e) => { e.stopPropagation(); downloadOneCSV(file); }}
+                  className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-cyan-500/20 transition-all flex items-center gap-1.5"
+                  title="Download Adobe CSV"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-3 h-3" />
+                  CSV
                 </button>
                 {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
               </div>
@@ -149,13 +192,22 @@ export const MetadataDisplay: React.FC<MetadataDisplayProps> = ({ files }) => {
 
                             {/* Keywords */}
                             <div className="space-y-2">
-                                <h5 className="text-xs uppercase font-bold text-gray-500 flex items-center gap-2">
-                                    <Tag className="w-3 h-3 text-red-400" /> Keywords
-                                </h5>
+                                <div className="flex items-center justify-between">
+                                    <h5 className="text-xs uppercase font-bold text-gray-500 flex items-center gap-2">
+                                        <Tag className="w-3 h-3 text-red-400" /> Keywords
+                                    </h5>
+                                    <button 
+                                        onClick={() => copyKeywordsAsCSV(m.keywords, `tags-${file.id}`)}
+                                        className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-bold"
+                                    >
+                                        {copiedId === `tags-${file.id}` ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
+                                        {copiedId === `tags-${file.id}` ? "Copied CSV" : "Copy as CSV"}
+                                    </button>
+                                </div>
                                 <div className="flex flex-wrap gap-2">
                                     {m.keywords.map((tag, i) => (
                                         <span key={i} className="px-2 py-0.5 rounded-md bg-white/5 border border-white/10 text-[10px] text-gray-400 hover:text-white transition-colors cursor-default">
-                                            #{tag}
+                                            {tag}
                                         </span>
                                     ))}
                                 </div>

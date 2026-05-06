@@ -4,14 +4,15 @@ import { ImageMetadata } from "../types";
 const METADATA_SCHEMA = {
   type: Type.OBJECT,
   properties: {
-    file_name: { type: Type.STRING },
-    title: { type: Type.STRING },
-    description: { type: Type.STRING },
+    file_name: { type: Type.STRING, description: "Adobe Stock friendly file name without extension" },
+    title: { type: Type.STRING, description: "Descriptive title for Adobe Stock, max 200 characters" },
     keywords: {
       type: Type.ARRAY,
+      description: "5-50 keywords for Adobe Stock SEO, comma separated",
       items: { type: Type.STRING }
     },
     category: { type: Type.STRING },
+    description: { type: Type.STRING },
     dominant_colors: {
       type: Type.ARRAY,
       items: { type: Type.STRING }
@@ -24,7 +25,7 @@ const METADATA_SCHEMA = {
     usage_suggestions: { type: Type.STRING }
   },
   required: [
-    "file_name", "title", "description", "keywords", "category", 
+    "file_name", "title", "keywords", "category", "description",
     "dominant_colors", "objects_detected", "mood", "usage_suggestions"
   ]
 };
@@ -51,7 +52,7 @@ export async function analyzeImage(file: File, customApiKey?: string): Promise<I
           },
         },
         {
-          text: "You are an AI image metadata generator. Analyze this image and return structured JSON metadata. Ensure keywords are 10-20 SEO tags. Description should be max 50 words.",
+          text: "Analyze this image for Adobe Stock. Generate an SEO-optimized title (no technical jargon) and 25-40 high-relevance keywords. Keywords must be in order of relevance. Ensure the title is descriptive and commercially viable.",
         },
       ],
     },
