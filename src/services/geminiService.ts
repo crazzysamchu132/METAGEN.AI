@@ -46,40 +46,56 @@ export async function analyzeImage(
   const base64Data = await fileToBase64(file);
   const mimeType = file.type;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: {
-      parts: [
-        {
-          inlineData: {
-            mimeType,
-            data: base64Data.split(',')[1],
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType,
+              data: base64Data.split(',')[1],
+            },
           },
-        },
-        {
-          text: `Analyze this image for Adobe Stock. 
+          {
+            text: `Analyze this image for Adobe Stock. 
 Generate a commercially viable, SEO-optimized title (max ${titleLength} characters).
 Generate exactly ${keywordCount} high-relevance keywords (min 5, max 50). 
 Keywords must be in order of relevance, lowercase, and unique. 
 Ensure the metadata is professional and suitable for stock photography.`,
-        },
-      ],
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: METADATA_SCHEMA,
-    },
-  });
+          },
+        ],
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: METADATA_SCHEMA,
+      },
+    });
 
-  if (!response.text) {
-    throw new Error("No response from AI");
-  }
+    if (!response.text) {
+      throw new Error("No response from AI");
+    }
 
-  try {
     return JSON.parse(response.text) as ImageMetadata;
-  } catch (e) {
-    console.error("Failed to parse AI response:", response.text);
-    throw new Error("Invalid metadata format returned by AI");
+  } catch (err: any) {
+    const errorMessage = err.message || String(err);
+    
+    // Quota reached
+    if (errorMessage.includes('429') || errorMessage.toLowerCase().includes('quota')) {
+      const quotaError = new Error("API Quota exceeded");
+      (quotaError as any).type = 'quota_exceeded';
+      throw quotaError;
+    }
+    
+    // Auth error / Invalid key
+    if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.toLowerCase().includes('api key')) {
+      const authError = new Error("Invalid API Key");
+      (authError as any).type = 'invalid_key';
+      throw authError;
+    }
+
+    console.error("AI Error:", err);
+    throw new Error(errorMessage);
   }
 }
 

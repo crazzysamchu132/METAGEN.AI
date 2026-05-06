@@ -6,6 +6,7 @@ import { MetadataDisplay } from './components/MetadataDisplay';
 import { SettingsModal } from './components/SettingsModal';
 import { AdminPanel } from './components/AdminPanel';
 import { AboutUs } from './components/AboutUs';
+import { ApiErrorPopup } from './components/ApiErrorPopup';
 import { AdBanner } from './components/AdBanner';
 import { Footer } from './components/Footer';
 import { UploadedFile, ImageMetadata, UserProfile } from './types';
@@ -27,6 +28,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [apiErrorType, setApiErrorType] = useState<'quota_exceeded' | 'invalid_key' | 'general' | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -138,8 +140,8 @@ export default function App() {
   };
 
   const handleFilesAdded = useCallback((newFiles: File[]) => {
-    if (files.length + newFiles.length > 10) {
-      alert("Maximum 10 images allowed per session.");
+    if (files.length + newFiles.length > 50) {
+      alert("Maximum 50 images allowed per session.");
       return;
     }
 
@@ -198,11 +200,19 @@ export default function App() {
             updatedFiles[i].progress = 100;
             updatedFiles[i].metadata = metadata;
             setFiles([...updatedFiles]);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
             updatedFiles[i].status = 'error';
             updatedFiles[i].error = error instanceof Error ? error.message : "Unknown error";
             setFiles([...updatedFiles]);
+
+            if (error.type === 'quota_exceeded') {
+              setApiErrorType('quota_exceeded');
+              break; // Stop processing others if quota hit
+            } else if (error.type === 'invalid_key') {
+              setApiErrorType('invalid_key');
+              break;
+            }
         }
     }
 
@@ -341,7 +351,7 @@ export default function App() {
                 ACCESS <span className="text-[#00f3ff]">RESTRICTED</span>
               </h1>
               <p className="text-gray-400 max-w-lg mx-auto text-lg leading-relaxed">
-                Unlock the full power of METAGEN.AI. Sign in with your Google account to analyze up to 10 images at once and save results to your cloud archive.
+                Unlock the full power of METAGEN.AI. Sign in with your Google account to analyze up to 50 images at once and save results to your cloud archive.
               </p>
             </div>
 
@@ -509,14 +519,14 @@ export default function App() {
                     <div className="lg:col-span-1">
                       <DropZone onFilesAdded={handleFilesAdded} />
                       <p className="mt-4 text-[10px] text-center text-gray-600 uppercase tracking-[0.2em] font-black">
-                        Limit: 10 images per session
+                        Limit: 50 images per session
                       </p>
                     </div>
                     <div className="lg:col-span-2">
                       <div className="glass-panel p-6 min-h-[400px] flex flex-col">
                         <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
                           <h3 className="text-lg font-bold flex items-center gap-2">
-                            Queue <span className="bg-white/10 text-xs px-2 py-0.5 rounded-full">{files.length} / 10</span>
+                            Queue <span className="bg-white/10 text-xs px-2 py-0.5 rounded-full">{files.length} / 50</span>
                           </h3>
                           {files.length > 0 && (
                             <div className="flex gap-2">
@@ -637,6 +647,12 @@ export default function App() {
         {isAboutOpen && (
           <AboutUs isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
         )}
+        <ApiErrorPopup 
+          isOpen={!!apiErrorType} 
+          onClose={() => setApiErrorType(null)} 
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          errorType={apiErrorType || 'general'}
+        />
       </AnimatePresence>
 
     </div>
