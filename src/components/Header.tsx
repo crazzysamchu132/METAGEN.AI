@@ -1,12 +1,22 @@
-import React from 'react';
-import { Camera, Github, Info, Settings } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Camera, Github, Info, Settings, LogIn, LogOut, User } from 'lucide-react';
 import { motion } from 'motion/react';
+import { auth, signInWithGoogle, logout } from '../lib/firebase';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 interface HeaderProps {
   onOpenSettings: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (u) => {
+      setUser(u);
+    });
+  }, []);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/50 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -26,8 +36,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-400">
           <a href="#" className="hover:text-cyan-400 transition-colors">Home</a>
           <a href="#" className="hover:text-cyan-400 transition-colors">Tools</a>
-          <a href="#" className="hover:text-cyan-400 transition-colors">History</a>
-          <a href="#" className="hover:text-cyan-400 transition-colors">API</a>
+          <a href="#" className="hover:text-cyan-400 transition-colors">Archive</a>
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-4">
@@ -38,9 +47,43 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
           >
             <Settings className="w-5 h-5" />
           </button>
-          <button className="p-2 text-gray-400 hover:text-white transition-colors">
-            <Info className="w-5 h-5" />
-          </button>
+          
+          <div className="h-6 w-px bg-white/10 mx-1" />
+
+          {user ? (
+            <div className="flex items-center gap-3">
+               <div className="hidden sm:flex flex-col items-end">
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Authenticated</span>
+                  <span className="text-xs text-white max-w-[100px] truncate">{user.displayName || user.email}</span>
+               </div>
+               <div className="relative group">
+                  <button className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/20">
+                    {user.photoURL ? (
+                      <img src={user.photoURL} alt="User" />
+                    ) : (
+                      <User className="w-5 h-5" />
+                    )}
+                  </button>
+                  <div className="absolute top-full right-0 mt-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
+                    <button 
+                      onClick={() => logout()}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg whitespace-nowrap shadow-xl"
+                    >
+                      <LogOut className="w-3 h-3" /> Sign Out
+                    </button>
+                  </div>
+               </div>
+            </div>
+          ) : (
+            <button 
+              onClick={() => signInWithGoogle()}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-black text-sm font-bold hover:bg-gray-200 transition-colors"
+            >
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </button>
+          )}
+
           <button className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm hover:bg-white/10 transition-colors">
             <Github className="w-4 h-4" />
             GitHub

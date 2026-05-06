@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "ImageMetadata": {
+      "title": "Image Metadata",
+      "description": "Structured metadata generated for an image by AI.",
+      "type": "object",
+      "properties": {
+        "file_name": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "category": { "type": "string" },
+        "dominant_colors": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "objects_detected": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "mood": { "type": "string" },
+        "usage_suggestions": { "type": "string" }
+      },
+      "required": [
+        "file_name", "title", "description", "keywords", "category",
+        "dominant_colors", "objects_detected", "mood", "usage_suggestions"
+      ]
+    },
+    "ScanRecord": {
+      "title": "Scan Record",
+      "description": "A record of an image scan including the metadata and owner info.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "metadata": { "$ref": "ImageMetadata" },
+        "imageUrl": { "type": "string", "description": "Preview URL if available, though usually we don't store binary data in Firestore. Here we might store a thumbnail ref or just the metadata." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "metadata", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/scans/{scanId}": {
+      "schema": "ScanRecord",
+      "description": "History of generated image metadata records."
+    }
+  }
+}

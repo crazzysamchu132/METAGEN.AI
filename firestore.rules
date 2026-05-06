@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Validation Blueprint for ImageMetadata
+    function isValidMetadata(data) {
+      return data.keys().hasAll(['file_name', 'title', 'description', 'keywords', 'category', 'dominant_colors', 'objects_detected', 'mood', 'usage_suggestions'])
+        && data.keys().size() == 9
+        && data.file_name is string && data.file_name.size() < 256
+        && data.title is string && data.title.size() < 256
+        && data.description is string && data.description.size() < 1000
+        && data.keywords is list && data.keywords.size() <= 30
+        && data.category is string
+        && data.dominant_colors is list
+        && data.objects_detected is list
+        && data.mood is string
+        && data.usage_suggestions is string;
+    }
+
+    // Validation Blueprint for ScanRecord
+    function isValidScanRecord(data) {
+      return data.keys().hasAll(['userId', 'metadata', 'createdAt'])
+        && data.keys().size() == 3
+        && data.userId == request.auth.uid
+        && isValidMetadata(data.metadata)
+        && data.createdAt == request.time;
+    }
+
+    // Scans Collection
+    match /scans/{scanId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && isValidId(scanId)
+        && isValidScanRecord(incoming());
+        
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+      
+      // Updates are not allowed for historical scan records in this app
+      allow update: if false;
+    }
+  }
+}
