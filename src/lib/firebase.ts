@@ -58,11 +58,12 @@ async function testConnection() {
 testConnection();
 
 export const ADMIN_EMAIL = 'sajewel132@gmail.com';
+export const ADMIN_UID = 'HI7LPBRcuLMRpk8D2i4WJLlT00n2';
 
 export const signInWithGoogle = async () => {
     try {
         const result = await signInWithPopup(auth, googleProvider);
-        const isAdmin = result.user.email === ADMIN_EMAIL;
+        const isAdmin = result.user.email === ADMIN_EMAIL || result.user.uid === ADMIN_UID;
         
         // Update user profile in Firestore for persistence if needed
         try {

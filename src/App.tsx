@@ -52,6 +52,12 @@ export default function App() {
     let unsubscribeProfile: (() => void) | undefined;
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      // Cleanup previous profile subscription if user changes
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = undefined;
+      }
+
       const isNewLogin = !currentUser && user;
       setCurrentUser(user);
       
@@ -98,6 +104,7 @@ export default function App() {
 
         return () => unsubscribeFirestore();
       } else {
+        setAuthLoading(false);
         // Load history from local storage for anonymous users
         const savedHistory = localStorage.getItem('metagen_history');
         if (savedHistory) {

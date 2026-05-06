@@ -26,6 +26,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'sajewel132@gmail.com' ||
+        request.auth.uid == 'HI7LPBRcuLMRpk8D2i4WJLlT00n2' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }

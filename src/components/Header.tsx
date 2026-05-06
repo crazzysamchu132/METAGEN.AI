@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Camera, Facebook, Info, Settings, LogIn, LogOut, User, Shield } from 'lucide-react';
 import { motion } from 'motion/react';
-import { auth, signInWithGoogle, logout, ADMIN_EMAIL } from '../lib/firebase';
+import { auth, signInWithGoogle, logout, ADMIN_EMAIL, ADMIN_UID } from '../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 interface HeaderProps {
@@ -18,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenAdmin }) =
     });
   }, []);
 
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = user?.email === ADMIN_EMAIL || user?.uid === ADMIN_UID;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/50 backdrop-blur-md">
@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenAdmin }) =
                   <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Authenticated</span>
                   <span className="text-xs text-white max-w-[100px] truncate">{user.displayName || user.email}</span>
                </div>
-               <div className="relative group">
+               <div className="flex items-center gap-2">
                   <button className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/20">
                     {user.photoURL ? (
                       <img src={user.photoURL} alt="User" />
@@ -77,14 +77,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenAdmin }) =
                       <User className="w-5 h-5" />
                     )}
                   </button>
-                  <div className="absolute top-full right-0 mt-2 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity z-50">
-                    <button 
-                      onClick={() => logout()}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg whitespace-nowrap shadow-xl"
-                    >
-                      <LogOut className="w-3 h-3" /> Sign Out
-                    </button>
-                  </div>
+                  <button 
+                    onClick={() => logout()}
+                    className="flex items-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest rounded-lg border border-red-500/30 transition-all"
+                    title="Sign Out"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </button>
                </div>
             </div>
           ) : (
