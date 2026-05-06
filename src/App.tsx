@@ -30,6 +30,13 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  const [titleLength, setTitleLength] = useState(70);
+  const [keywordCount, setKeywordCount] = useState(35);
+
+  const resetDefaults = () => {
+    setTitleLength(70);
+    setKeywordCount(35);
+  };
 
   // Session expiry check
   useEffect(() => {
@@ -183,7 +190,7 @@ export default function App() {
             updatedFiles[i].progress = 10;
             setFiles([...updatedFiles]);
 
-            const metadata = await analyzeImage(updatedFiles[i].file, apiKey);
+            const metadata = await analyzeImage(updatedFiles[i].file, apiKey, { titleLength, keywordCount });
             
             updatedFiles[i].status = 'completed';
             updatedFiles[i].progress = 100;
@@ -235,19 +242,13 @@ export default function App() {
     const completed = files.filter(f => f.status === 'completed' && f.metadata);
     if (completed.length === 0) return;
 
-    const headers = ["File Name", "Title", "Description", "Keywords", "Category", "Colors", "Objects", "Mood", "Suggestions"];
+    const headers = ["Filename", "Title", "Keywords"];
     const rows = completed.map(f => {
         const m = f.metadata!;
         return [
             m.file_name,
-            m.title,
-            `"${m.description.replace(/"/g, '""')}"`,
-            `"${m.keywords.join(', ')}"`,
-            m.category,
-            `"${m.dominant_colors.join(', ')}"`,
-            `"${m.objects_detected.join(', ')}"`,
-            m.mood,
-            `"${m.usage_suggestions.replace(/"/g, '""')}"`
+            `"${m.title.replace(/"/g, '""')}"`,
+            `"${m.keywords.join(', ').replace(/"/g, '""')}"`
         ];
     });
 
@@ -454,6 +455,52 @@ export default function App() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="space-y-8"
                 >
+                  {/* Adobe Stock Settings */}
+                  <div className="glass-panel p-6 border-cyan-500/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
+                        <Camera className="w-4 h-4 text-cyan-400" />
+                        Adobe Stock Optimization
+                      </h4>
+                      <button 
+                        onClick={resetDefaults}
+                        className="text-[10px] uppercase font-bold text-gray-500 hover:text-cyan-400 transition-colors"
+                      >
+                        Reset to Default
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Title Length</label>
+                          <span className="text-xs font-mono text-cyan-400">{titleLength} chars</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="10" 
+                          max="200" 
+                          value={titleLength} 
+                          onChange={(e) => setTitleLength(parseInt(e.target.value))}
+                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Keywords Count</label>
+                          <span className="text-xs font-mono text-cyan-400">{keywordCount} tags</span>
+                        </div>
+                        <input 
+                          type="range" 
+                          min="5" 
+                          max="50" 
+                          value={keywordCount} 
+                          onChange={(e) => setKeywordCount(parseInt(e.target.value))}
+                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Upload Section */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-1">

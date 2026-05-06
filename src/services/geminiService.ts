@@ -30,8 +30,13 @@ const METADATA_SCHEMA = {
   ]
 };
 
-export async function analyzeImage(file: File, customApiKey?: string): Promise<ImageMetadata> {
+export async function analyzeImage(
+  file: File, 
+  customApiKey?: string, 
+  config: { titleLength?: number; keywordCount?: number } = {}
+): Promise<ImageMetadata> {
   const apiKey = customApiKey || process.env.GEMINI_API_KEY || "";
+  const { titleLength = 70, keywordCount = 35 } = config;
   
   if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
     throw new Error("Gemini API Key is missing. Please add it in Settings.");
@@ -52,7 +57,11 @@ export async function analyzeImage(file: File, customApiKey?: string): Promise<I
           },
         },
         {
-          text: "Analyze this image for Adobe Stock. Generate an SEO-optimized title (no technical jargon) and 25-40 high-relevance keywords. Keywords must be in order of relevance. Ensure the title is descriptive and commercially viable.",
+          text: `Analyze this image for Adobe Stock. 
+Generate a commercially viable, SEO-optimized title (max ${titleLength} characters).
+Generate exactly ${keywordCount} high-relevance keywords (min 5, max 50). 
+Keywords must be in order of relevance, lowercase, and unique. 
+Ensure the metadata is professional and suitable for stock photography.`,
         },
       ],
     },
