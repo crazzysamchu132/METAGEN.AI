@@ -10,9 +10,10 @@ interface HeaderProps {
   userProfile: UserProfile | null;
   onOpenSettings: () => void;
   onOpenAdmin: () => void;
+  onOpenAbout: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, userProfile, onOpenSettings, onOpenAdmin }) => {
+export const Header: React.FC<HeaderProps> = ({ user, userProfile, onOpenSettings, onOpenAdmin, onOpenAbout }) => {
   const isAdmin = user?.email === ADMIN_EMAIL || 
                   user?.uid === ADMIN_UID || 
                   userProfile?.role === 'admin';
@@ -35,7 +36,12 @@ export const Header: React.FC<HeaderProps> = ({ user, userProfile, onOpenSetting
 
         <nav className="flex items-center gap-3 sm:gap-8 text-[10px] sm:text-sm font-bold uppercase tracking-widest text-gray-400">
           <a href="#" className="hover:text-cyan-400 transition-colors hidden sm:block">Home</a>
-          <a href="#" className="hover:text-cyan-400 transition-colors">About Us</a>
+          <button 
+            onClick={onOpenAbout}
+            className="hover:text-cyan-400 transition-colors cursor-pointer"
+          >
+            About Us
+          </button>
         </nav>
 
         <div className="flex items-center gap-1 sm:gap-4">

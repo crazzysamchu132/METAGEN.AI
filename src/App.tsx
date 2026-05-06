@@ -5,6 +5,7 @@ import { ImageGrid } from './components/ImageGrid';
 import { MetadataDisplay } from './components/MetadataDisplay';
 import { SettingsModal } from './components/SettingsModal';
 import { AdminPanel } from './components/AdminPanel';
+import { AboutUs } from './components/AboutUs';
 import { AdBanner } from './components/AdBanner';
 import { Footer } from './components/Footer';
 import { UploadedFile, ImageMetadata, UserProfile } from './types';
@@ -25,6 +26,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('metagen_api_key') || '');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -317,6 +319,7 @@ export default function App() {
         userProfile={userProfile}
         onOpenSettings={() => setIsSettingsOpen(true)} 
         onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenAbout={() => setIsAboutOpen(true)}
       />
       
       <main className="container mx-auto px-4 py-8 max-w-6xl">
@@ -630,6 +633,9 @@ export default function App() {
       <AnimatePresence>
         {isAdminOpen && (
           <AdminPanel onClose={() => setIsAdminOpen(false)} />
+        )}
+        {isAboutOpen && (
+          <AboutUs isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
         )}
       </AnimatePresence>
 
