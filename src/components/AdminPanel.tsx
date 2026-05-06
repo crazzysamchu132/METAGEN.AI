@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp, orderBy } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType, ADMIN_EMAIL, ADMIN_UID } from '../lib/firebase';
 import { UserProfile } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, UserX, UserCheck, Search, AlertOctagon, X, Clock, Mail, Globe } from 'lucide-react';
@@ -42,6 +42,19 @@ export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       await updateDoc(userRef, {
         isBanned: false,
         banReason: null,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+    }
+  };
+
+  const handleToggleAdmin = async (user: UserProfile) => {
+    const isTargetAdmin = user.role === 'admin';
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        role: isTargetAdmin ? 'user' : 'admin',
         updatedAt: serverTimestamp()
       });
     } catch (error) {
@@ -196,19 +209,34 @@ export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       </div>
                     </td>
                     <td className="px-4 py-3 last:rounded-r-xl text-right">
-                      {user.email !== 'sajewel132@gmail.com' && (
-                        <button 
-                          onClick={() => handleToggleBan(user)}
-                          className={`p-2 rounded-lg transition-all ${
-                            user.isBanned 
-                              ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' 
-                              : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                          }`}
-                          title={user.isBanned ? "Revoke Ban" : "Execute Ban"}
-                        >
-                          {user.isBanned ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {user.email !== ADMIN_EMAIL && user.uid !== ADMIN_UID && (
+                          <>
+                            <button 
+                              onClick={() => handleToggleAdmin(user)}
+                              className={`p-2 rounded-lg transition-all ${
+                                user.role === 'admin'
+                                  ? 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20'
+                                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                              }`}
+                              title={user.role === 'admin' ? "Remove Admin Privileges" : "Assign Admin Privileges"}
+                            >
+                              <Shield className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleToggleBan(user)}
+                              className={`p-2 rounded-lg transition-all ${
+                                user.isBanned 
+                                  ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30' 
+                                  : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                              }`}
+                              title={user.isBanned ? "Revoke Ban" : "Execute Ban"}
+                            >
+                              {user.isBanned ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
