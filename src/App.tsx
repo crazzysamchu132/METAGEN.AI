@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Trash2, Play, Download, History as HistoryIcon, Camera, AlertTriangle, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { cn } from './lib/utils';
-import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
+import { auth, db, handleFirestoreError, OperationType, signInWithGoogle } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
@@ -24,6 +24,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('metagen_api_key') || '');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
 
@@ -47,6 +48,7 @@ export default function App() {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+      setAuthLoading(false);
       
       if (user) {
         // Sync history from Firestore
@@ -230,6 +232,17 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-cyan-400 font-bold tracking-widest text-xs uppercase animate-pulse">Initializing System...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-20">
       <Header onOpenSettings={() => setIsSettingsOpen(true)} />
@@ -258,9 +271,7 @@ export default function App() {
             </div>
 
             <button 
-              onClick={() => {
-                import('./lib/firebase').then(m => m.signInWithGoogle());
-              }}
+              onClick={() => signInWithGoogle()}
               className="group relative px-12 py-5 bg-white text-black font-black text-xl rounded-2xl hover:scale-105 transition-all duration-300 shadow-[0_20px_50px_rgba(255,255,255,0.1)]"
             >
               AUTHENTICATE WITH GOOGLE

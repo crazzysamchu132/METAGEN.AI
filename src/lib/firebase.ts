@@ -61,8 +61,19 @@ export const signInWithGoogle = async () => {
     try {
         const result = await signInWithPopup(auth, googleProvider);
         return result.user;
-    } catch (error) {
-        console.error("Auth Error", error);
+    } catch (error: any) {
+        console.error("Firebase Auth Error:", error);
+        
+        if (error.code === 'auth/popup-blocked') {
+            alert("Sign-in popup blocked by browser. Please allow popups for this site and try again.");
+        } else if (error.code === 'auth/popup-closed-by-user') {
+            // User closed the popup before finishing sign-in
+            console.log("Sign-in popup closed by user.");
+        } else if (error.code === 'auth/unauthorized-domain') {
+            alert(`Unauthorized domain. Please add the current domain to your Firebase Console 'Authorized domains' list: ${window.location.hostname}`);
+        } else {
+            alert(`Sign-in failed: ${error.message || 'Unknown error'}`);
+        }
         throw error;
     }
 };
