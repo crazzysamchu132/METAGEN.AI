@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, doc, getDocFromServer, setDoc, serverTimestamp } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
@@ -57,9 +57,29 @@ async function testConnection() {
 
 testConnection();
 
+export const ADMIN_EMAIL = 'sajewel132@gmail.com';
+
 export const signInWithGoogle = async () => {
     try {
         const result = await signInWithPopup(auth, googleProvider);
+        const isAdmin = result.user.email === ADMIN_EMAIL;
+        
+        // Update user profile in Firestore for persistence if needed
+        try {
+            const userRef = doc(db, 'users', result.user.uid);
+            await setDoc(userRef, {
+                uid: result.user.uid,
+                displayName: result.user.displayName,
+                email: result.user.email,
+                photoURL: result.user.photoURL,
+                role: isAdmin ? 'admin' : 'user',
+                lastLogin: serverTimestamp(),
+                domain: window.location.hostname
+            }, { merge: true });
+        } catch (e) {
+            console.warn("Could not sync user profile:", e);
+        }
+
         return result.user;
     } catch (error: any) {
         console.error("Firebase Auth Error:", error);

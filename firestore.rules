@@ -23,6 +23,30 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'sajewel132@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    // Validation Blueprint for UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'role'])
+        && data.uid == request.auth.uid
+        && data.role in ['admin', 'user']
+        && (data.role == 'user' || data.email == 'sajewel132@gmail.com');
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      
+      allow create, update: if (isSignedIn() && isOwner(userId) && isValidUserProfile(incoming()))
+        || isAdmin();
+    }
+
     // Validation Blueprint for ImageMetadata
     function isValidMetadata(data) {
       return data.keys().hasAll(['file_name', 'title', 'description', 'keywords', 'category', 'dominant_colors', 'objects_detected', 'mood', 'usage_suggestions'])

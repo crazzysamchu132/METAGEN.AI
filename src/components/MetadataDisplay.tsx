@@ -3,7 +3,7 @@ import { UploadedFile, ImageMetadata } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
     Maximize2, Copy, Download, Tag, Box, Palette, 
-    Smile, Lightbulb, FileText, Check, ChevronDown, ChevronUp 
+    Smile, Lightbulb, FileText, Check, ChevronDown, ChevronUp, Camera 
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -51,8 +51,12 @@ export const MetadataDisplay: React.FC<MetadataDisplayProps> = ({ files }) => {
                 onClick={() => setExpandedId(isExpanded ? null : file.id)}
                 className="flex items-center gap-4 p-4 cursor-pointer"
             >
-              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
-                <img src={file.preview} alt="Thumb" className="w-full h-full object-cover" />
+              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border border-white/10 bg-white/5 flex items-center justify-center">
+                {file.preview ? (
+                  <img src={file.preview} alt="Thumb" className="w-full h-full object-cover" />
+                ) : (
+                  <Camera className="w-5 h-5 text-gray-600" />
+                )}
               </div>
               
               <div className="flex-1 min-w-0">
@@ -89,13 +93,22 @@ export const MetadataDisplay: React.FC<MetadataDisplayProps> = ({ files }) => {
                     
                     {/* Visual Section */}
                     <div className="lg:col-span-3 space-y-4">
-                        <div className="aspect-[3/4] rounded-xl overflow-hidden border border-white/10 group relative">
-                            <img src={file.preview} alt="Full" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white">
-                                    <Maximize2 className="w-5 h-5" />
-                                </button>
-                            </div>
+                        <div className="aspect-[3/4] rounded-xl overflow-hidden border border-white/10 group relative bg-white/5 flex items-center justify-center">
+                            {file.preview ? (
+                                <>
+                                    <img src={file.preview} alt="Full" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button className="p-2 bg-white/20 backdrop-blur-md rounded-full text-white">
+                                            <Maximize2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex flex-col items-center gap-2 text-gray-600">
+                                    <Camera className="w-10 h-10" />
+                                    <span className="text-[10px] uppercase font-bold">No Preview</span>
+                                </div>
+                            )}
                         </div>
                         
                         <div className="space-y-2">

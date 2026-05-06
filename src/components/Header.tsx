@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Camera, Facebook, Info, Settings, LogIn, LogOut, User } from 'lucide-react';
+import { Camera, Facebook, Info, Settings, LogIn, LogOut, User, Shield } from 'lucide-react';
 import { motion } from 'motion/react';
-import { auth, signInWithGoogle, logout } from '../lib/firebase';
+import { auth, signInWithGoogle, logout, ADMIN_EMAIL } from '../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 interface HeaderProps {
   onOpenSettings: () => void;
+  onOpenAdmin: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
+export const Header: React.FC<HeaderProps> = ({ onOpenSettings, onOpenAdmin }) => {
   const [user, setUser] = useState<FirebaseUser | null>(null);
 
   useEffect(() => {
@@ -16,6 +17,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
       setUser(u);
     });
   }, []);
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/50 backdrop-blur-md">
@@ -40,6 +43,16 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-4">
+          {isAdmin && (
+            <button 
+              onClick={onOpenAdmin}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-cyan-500/20 transition-all"
+            >
+              <Shield className="w-3 h-3" />
+              Admin
+            </button>
+          )}
+
           <button 
             onClick={onOpenSettings}
             className="p-2 text-gray-400 hover:text-white transition-colors hover:bg-white/5 rounded-lg"

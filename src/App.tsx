@@ -4,17 +4,18 @@ import { DropZone } from './components/DropZone';
 import { ImageGrid } from './components/ImageGrid';
 import { MetadataDisplay } from './components/MetadataDisplay';
 import { SettingsModal } from './components/SettingsModal';
+import { AdminPanel } from './components/AdminPanel';
 import { AdBanner } from './components/AdBanner';
 import { Footer } from './components/Footer';
-import { UploadedFile, ImageMetadata } from './types';
+import { UploadedFile, ImageMetadata, UserProfile } from './types';
 import { analyzeImage } from './services/geminiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Trash2, Play, Download, History as HistoryIcon, Camera, AlertTriangle, Lock } from 'lucide-react';
+import { Sparkles, Trash2, Play, Download, History as HistoryIcon, Camera, AlertTriangle, Lock, ShieldAlert, LogOut } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { cn } from './lib/utils';
-import { auth, db, handleFirestoreError, OperationType, signInWithGoogle } from './lib/firebase';
+import { auth, db, handleFirestoreError, OperationType, signInWithGoogle, logout } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, Timestamp, doc } from 'firebase/firestore';
 
 export default function App() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -23,7 +24,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'generate' | 'history'>('generate');
   const [apiKey, setApiKey] = useState(localStorage.getItem('metagen_api_key') || '');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -46,11 +49,28 @@ export default function App() {
 
   // Auth & Firestore Sync
   useEffect(() => {
+    let unsubscribeProfile: (() => void) | undefined;
+
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      const isNewLogin = !currentUser && user;
       setCurrentUser(user);
-      setAuthLoading(false);
       
       if (user) {
+        // Sync user profile for ban/role check
+        const profileRef = doc(db, 'users', user.uid);
+        unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setUserProfile(docSnap.data() as UserProfile);
+          }
+          setAuthLoading(false);
+        }, (err) => {
+          console.error("Profile sync error:", err);
+          setAuthLoading(false);
+        });
+
+        if (isNewLogin) {
+          console.log("Welcome back, ", user.displayName);
+        }
         // Sync history from Firestore
         const q = query(
           collection(db, 'scans'),
@@ -90,7 +110,10 @@ export default function App() {
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
   const saveApiKey = (key: string) => {
@@ -243,9 +266,48 @@ export default function App() {
     );
   }
 
+  if (userProfile?.isBanned) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-lg bg-red-950/20 border-2 border-red-500/50 rounded-[40px] p-12 text-center space-y-8 backdrop-blur-3xl shadow-[0_0_100px_rgba(239,68,68,0.2)]"
+        >
+          <div className="relative inline-block">
+            <div className="absolute inset-0 bg-red-500 blur-3xl opacity-20 animate-pulse" />
+            <ShieldAlert className="w-24 h-24 text-red-500 mx-auto relative z-10" />
+          </div>
+          
+          <div className="space-y-4">
+            <h2 className="text-5xl font-black text-white italic tracking-tighter">ACCESS VOIDED</h2>
+            <div className="w-20 h-1 bg-red-500 mx-auto rounded-full" />
+            <p className="text-red-400 font-mono text-sm tracking-widest uppercase">Biological account flagged for termination</p>
+          </div>
+
+          <div className="bg-black/40 border border-red-500/30 rounded-2xl p-6 space-y-2">
+            <h4 className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Official Notice</h4>
+            <p className="text-white font-medium italic">"{userProfile.banReason || 'Security policy violation detected. No specific reasoning provided by administration.'}"</p>
+          </div>
+
+          <button 
+            onClick={() => logout()}
+            className="flex items-center gap-3 px-8 py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-500 transition-all uppercase tracking-widest text-sm shadow-xl shadow-red-600/20 mx-auto"
+          >
+            <LogOut className="w-5 h-5" />
+            Disconnect Session
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen pb-20">
-      <Header onOpenSettings={() => setIsSettingsOpen(true)} />
+      <Header 
+        onOpenSettings={() => setIsSettingsOpen(true)} 
+        onOpenAdmin={() => setIsAdminOpen(true)}
+      />
       
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         {!currentUser ? (
@@ -508,6 +570,12 @@ export default function App() {
         apiKey={apiKey} 
         onSave={saveApiKey} 
       />
+      
+      <AnimatePresence>
+        {isAdminOpen && (
+          <AdminPanel onClose={() => setIsAdminOpen(false)} />
+        )}
+      </AnimatePresence>
 
     </div>
   );
