@@ -8,6 +8,8 @@ export interface UserProfile {
   banReason?: string;
   points?: number;
   lastDailyReset?: string;
+  streak?: number;
+  lastDailyClaim?: string;
   lastLogin: any;
   createdAt: any;
 }

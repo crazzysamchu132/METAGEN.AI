@@ -52,7 +52,8 @@ service cloud.firestore {
         (incoming().points == existing().points - 1) ||
         (incoming().points == existing().points + 50 && incoming().lastDailyReset != existing().lastDailyReset) ||
         (incoming().points == existing().points) ||
-        (!('points' in existing()) && incoming().points == 100)
+        (!('points' in existing()) && incoming().points == 100) ||
+        (incoming().points >= existing().points + 10 && incoming().points <= existing().points + 50 && (!('lastDailyClaim' in existing()) || incoming().lastDailyClaim != existing().lastDailyClaim))
       )) || isAdmin();
     }
 
@@ -94,8 +95,12 @@ service cloud.firestore {
         
       allow delete: if isSignedIn() && isOwner(existing().userId);
       
-      // Updates are not allowed for historical scan records in this app
-      allow update: if false;
+      // Allow logged-in owners to update their scan records (for interactive tag rearrangement or adjustments)
+      allow update: if isSignedIn()
+        && isOwner(existing().userId)
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && isValidMetadata(incoming().metadata);
     }
   }
 }

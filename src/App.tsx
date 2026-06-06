@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { DropZone } from './components/DropZone';
 import { ImageGrid } from './components/ImageGrid';
 import { MetadataDisplay } from './components/MetadataDisplay';
+import { LoyaltyZone } from './components/LoyaltyZone';
 import { SettingsModal } from './components/SettingsModal';
 import { AdminPanel } from './components/AdminPanel';
 import { AboutUs } from './components/AboutUs';
@@ -10,21 +11,22 @@ import { WelcomePopup } from './components/WelcomePopup';
 import { ApiErrorPopup } from './components/ApiErrorPopup';
 import { AdBanner } from './components/AdBanner';
 import { Footer } from './components/Footer';
+import { UserManual } from './components/UserManual';
 import { UploadedFile, ImageMetadata, UserProfile } from './types';
 import { analyzeImage } from './services/geminiService';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Trash2, Play, Download, History as HistoryIcon, Camera, AlertTriangle, Lock, ShieldAlert, LogOut } from 'lucide-react';
+import { Sparkles, Trash2, Play, Download, History as HistoryIcon, Camera, AlertTriangle, Lock, ShieldAlert, LogOut, BookOpen } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { cn } from './lib/utils';
 import { auth, db, handleFirestoreError, OperationType, signInWithGoogle, logout, getResetCycleDateStr } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
 
 export default function App() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [history, setHistory] = useState<UploadedFile[]>([]);
-  const [activeTab, setActiveTab] = useState<'generate' | 'history'>('generate');
+  const [activeTab, setActiveTab] = useState<'generate' | 'history' | 'manual'>('generate');
   const [apiKey, setApiKey] = useState(localStorage.getItem('metagen_api_key') || '');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -343,6 +345,47 @@ export default function App() {
     document.body.removeChild(link);
   };
 
+  const handleUpdateMetadata = async (id: string, updatedMetadata: ImageMetadata) => {
+    // 1. Update live files queue
+    setFiles(prev => prev.map(f => f.id === id ? { ...f, metadata: updatedMetadata } : f));
+    
+    // 2. Update local state archive copy
+    setHistory(prev => prev.map(f => f.id === id ? { ...f, metadata: updatedMetadata } : f));
+
+    // 3. Replicate update to Firestore cloud record if signed-in owner
+    if (currentUser) {
+      try {
+        const scanRef = doc(db, 'scans', id);
+        const docSnap = await getDoc(scanRef).catch(() => null);
+        if (docSnap && docSnap.exists()) {
+          await updateDoc(scanRef, {
+            metadata: updatedMetadata,
+            updatedAt: serverTimestamp()
+          });
+          console.log("Remote stock scan record synced in Firestore successfully!");
+        }
+      } catch (err) {
+        console.warn("Could not sync metadata update to Remote Firestore:", err);
+      }
+    } else {
+      // Offline fallback: save changes in standard persistent key for guest rosters
+      const savedHistory = localStorage.getItem('metagen_history');
+      if (savedHistory) {
+        try {
+          const parsed = JSON.parse(savedHistory);
+          if (Array.isArray(parsed)) {
+            const updatedHistory = parsed.map((item: any) => 
+              item.id === id ? { ...item, metadata: updatedMetadata } : item
+            );
+            localStorage.setItem('metagen_history', JSON.stringify(updatedHistory));
+          }
+        } catch (e) {
+          console.error("Local storage sync mismatch:", e);
+        }
+      }
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -524,6 +567,18 @@ export default function App() {
                   <HistoryIcon className="w-4 h-4" />
                   Archive
                 </button>
+                <button 
+                  onClick={() => setActiveTab('manual')}
+                  className={cn(
+                    "flex items-center gap-2 px-6 py-2 rounded-full transition-all duration-300 border",
+                    activeTab === 'manual' 
+                      ? "bg-purple-500/10 border-purple-400 text-purple-400 neon-purple-glow" 
+                      : "border-white/10 text-gray-500 hover:text-white"
+                  )}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  User Manual
+                </button>
               </div>
             </section>
 
@@ -536,50 +591,67 @@ export default function App() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   className="space-y-8"
                 >
-                  {/* Adobe Stock Settings */}
-                  <div className="glass-panel p-6 border-cyan-500/20">
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
-                        <Camera className="w-4 h-4 text-cyan-400" />
-                        Adobe Stock Optimization
-                      </h4>
-                      <button 
-                        onClick={resetDefaults}
-                        className="text-[10px] uppercase font-bold text-gray-500 hover:text-cyan-400 transition-colors"
-                      >
-                        Reset to Default
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Title Length</label>
-                          <span className="text-xs font-mono text-cyan-400">{titleLength} chars</span>
+                  {/* Two-Column Optimization & Gamified Loyalty Booster Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Adobe Stock Settings */}
+                    <div className="glass-panel p-6 border-cyan-500/20 flex flex-col justify-between h-full">
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
+                            <Camera className="w-4 h-4 text-cyan-400" />
+                            Adobe Stock Optimization
+                          </h4>
+                          <button 
+                            onClick={resetDefaults}
+                            className="text-[10px] uppercase font-bold text-gray-500 hover:text-cyan-400 transition-colors"
+                          >
+                            Reset to Default
+                          </button>
                         </div>
-                        <input 
-                          type="range" 
-                          min="10" 
-                          max="200" 
-                          value={titleLength} 
-                          onChange={(e) => setTitleLength(parseInt(e.target.value))}
-                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                        />
+                        <p className="text-xs text-gray-400 leading-relaxed mb-6 font-medium">
+                          Configure targeted length and keywords count rules. These constraints scope the AI model during real-time batch extraction.
+                        </p>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Keywords Count</label>
-                          <span className="text-xs font-mono text-cyan-400">{keywordCount} tags</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Title Length</label>
+                            <span className="text-xs font-mono text-cyan-400">{titleLength} chars</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="10" 
+                            max="200" 
+                            value={titleLength} 
+                            onChange={(e) => setTitleLength(parseInt(e.target.value))}
+                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                          />
                         </div>
-                        <input 
-                          type="range" 
-                          min="5" 
-                          max="50" 
-                          value={keywordCount} 
-                          onChange={(e) => setKeywordCount(parseInt(e.target.value))}
-                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                        />
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <label className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Keywords Count</label>
+                            <span className="text-xs font-mono text-cyan-400">{keywordCount} tags</span>
+                          </div>
+                          <input 
+                            type="range" 
+                            min="5" 
+                            max="50" 
+                            value={keywordCount} 
+                            onChange={(e) => setKeywordCount(parseInt(e.target.value))}
+                            className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                          />
+                        </div>
                       </div>
                     </div>
+
+                    {/* Gamified Loyalty Booster Station */}
+                    <LoyaltyZone 
+                      currentUser={currentUser} 
+                      userProfile={userProfile} 
+                      onRefreshProfile={() => {
+                        console.log("Loyalty claimed successfully!");
+                      }} 
+                    />
                   </div>
 
                   {/* Upload Section */}
@@ -659,12 +731,15 @@ export default function App() {
                             <Download className="w-4 h-4" /> Export CSV
                           </button>
                         </div>
-                        <MetadataDisplay files={files.filter(f => f.status === 'completed')} />
+                        <MetadataDisplay 
+                          files={files.filter(f => f.status === 'completed')} 
+                          onUpdateFileMetadata={handleUpdateMetadata} 
+                        />
                       </motion.section>
                     )}
                   </AnimatePresence>
                 </motion.div>
-              ) : (
+              ) : activeTab === 'history' ? (
                 <motion.div
                   key="history-tab"
                   initial={{ opacity: 0, x: 20 }}
@@ -683,8 +758,21 @@ export default function App() {
                           <p className="text-xl">Your archive is empty.</p>
                       </div>
                   ) : (
-                      <MetadataDisplay files={history} />
+                      <MetadataDisplay 
+                        files={history} 
+                        onUpdateFileMetadata={handleUpdateMetadata} 
+                      />
                   )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="manual-tab"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  className="space-y-8"
+                >
+                  <UserManual />
                 </motion.div>
               )}
             </AnimatePresence>
