@@ -60,6 +60,17 @@ testConnection();
 export const ADMIN_EMAIL = 'sajewel132@gmail.com';
 export const ADMIN_UID = 'HI7LPBRcuLMRpk8D2i4WJLlT00n2';
 
+export const getResetCycleDateStr = (): string => {
+  const d = new Date();
+  if (d.getHours() < 6) {
+    d.setDate(d.getDate() - 1);
+  }
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const date = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${date}`;
+};
+
 export const signInWithGoogle = async () => {
     try {
         const result = await signInWithPopup(auth, googleProvider);
@@ -68,12 +79,21 @@ export const signInWithGoogle = async () => {
         // Update user profile in Firestore for persistence if needed
         try {
             const userRef = doc(db, 'users', result.user.uid);
+            const docSnap = await getDocFromServer(userRef).catch(() => null);
+            const exists = docSnap && docSnap.exists();
+            const data = exists ? docSnap.data() : null;
+
+            const currentPoints = (data && data.points !== undefined) ? data.points : 100;
+            const currentResetCycle = (data && data.lastDailyReset) || "";
+
             await setDoc(userRef, {
                 uid: result.user.uid,
                 displayName: result.user.displayName,
                 email: result.user.email,
                 photoURL: result.user.photoURL,
                 role: isAdmin ? 'admin' : 'user',
+                points: currentPoints,
+                lastDailyReset: currentResetCycle,
                 lastLogin: serverTimestamp(),
                 domain: window.location.hostname
             }, { merge: true });

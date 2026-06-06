@@ -6,6 +6,8 @@ export interface UserProfile {
   role: 'admin' | 'user';
   isBanned: boolean;
   banReason?: string;
+  points?: number;
+  lastDailyReset?: string;
   lastLogin: any;
   createdAt: any;
 }

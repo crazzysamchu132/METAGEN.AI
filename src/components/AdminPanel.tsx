@@ -79,6 +79,33 @@ export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }
   };
 
+  const handleAdjustPoints = async (user: UserProfile, amount: number) => {
+    const currentPoints = user.points !== undefined ? user.points : 100;
+    const newPoints = Math.max(0, currentPoints + amount);
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        points: newPoints,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+    }
+  };
+
+  const handleSetPoints = async (user: UserProfile, value: number) => {
+    const newPoints = Math.max(0, value);
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        points: newPoints,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+    }
+  };
+
   const filteredUsers = users.filter(user => 
     user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -152,6 +179,7 @@ export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                   <th className="px-4 text-left">Entity</th>
                   <th className="px-4 text-left">Security Status</th>
                   <th className="px-4 text-left">Activity</th>
+                  <th className="px-4 text-left">Points Balance</th>
                   <th className="px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -206,6 +234,60 @@ export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             {user.domain}
                           </div>
                         )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-1">
+                          <span className="font-mono text-cyan-400 font-bold bg-cyan-950/40 border border-cyan-500/20 px-2 py-0.5 rounded-lg text-xs min-w-[50px] text-center">
+                            {user.points !== undefined ? user.points : 100} pts
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-black/40 border border-white/5 p-1 rounded-lg w-max shadow-inner">
+                          <button
+                            onClick={() => handleAdjustPoints(user, -10)}
+                            className="w-8 h-6 flex items-center justify-center text-[10px] font-mono text-red-500 hover:bg-white/10 rounded transition-colors"
+                            title="Deduct 10 points"
+                          >
+                            -10
+                          </button>
+                          <button
+                            onClick={() => handleAdjustPoints(user, -1)}
+                            className="w-6 h-6 flex items-center justify-center text-[10px] font-mono text-red-400 hover:bg-white/10 rounded transition-colors"
+                            title="Deduct 1 point"
+                          >
+                            -1
+                          </button>
+                          <button
+                            onClick={() => handleAdjustPoints(user, 1)}
+                            className="w-6 h-6 flex items-center justify-center text-[10px] font-mono text-emerald-400 hover:bg-white/10 rounded transition-colors"
+                            title="Add 1 point"
+                          >
+                            +1
+                          </button>
+                          <button
+                            onClick={() => handleAdjustPoints(user, 10)}
+                            className="w-8 h-6 flex items-center justify-center text-[10px] font-mono text-emerald-500 hover:bg-white/10 rounded transition-colors"
+                            title="Add 10 points"
+                          >
+                            +10
+                          </button>
+                          <button
+                            onClick={() => {
+                              const val = prompt(`Reset points balance for ${user.displayName || user.email}:`, String(user.points !== undefined ? user.points : 100));
+                              if (val !== null) {
+                                const parsed = parseInt(val, 10);
+                                if (!isNaN(parsed)) {
+                                  handleSetPoints(user, parsed);
+                                }
+                              }
+                            }}
+                            className="px-1.5 h-6 flex items-center justify-center text-[9px] uppercase font-mono text-gray-400 hover:text-white hover:bg-white/5 rounded transition-colors"
+                            title="Set Custom Point Value"
+                          >
+                            Set
+                          </button>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 last:rounded-r-xl text-right">

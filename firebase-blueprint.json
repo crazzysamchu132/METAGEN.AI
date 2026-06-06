@@ -1,5 +1,25 @@
 {
   "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "A user profile storing metadata generator access roles, security status, and credits balance.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "isBanned": { "type": "boolean" },
+        "banReason": { "type": "string" },
+        "points": { "type": "integer", "description": "The user's credits balance for metadata generation." },
+        "lastDailyReset": { "type": "string", "description": "Local date YYYY-MM-DD of the user's last daily 50 pts top-up." },
+        "lastLogin": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "domain": { "type": "string" }
+      },
+      "required": ["uid", "email", "role", "points", "lastDailyReset"]
+    },
     "ImageMetadata": {
       "title": "Image Metadata",
       "description": "Structured metadata generated for an image by AI.",
@@ -36,13 +56,17 @@
       "properties": {
         "userId": { "type": "string" },
         "metadata": { "$ref": "ImageMetadata" },
-        "imageUrl": { "type": "string", "description": "Preview URL if available, though usually we don't store binary data in Firestore. Here we might store a thumbnail ref or just the metadata." },
+        "imageUrl": { "type": "string", "description": "Preview URL if available." },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "metadata", "createdAt"]
     }
   },
   "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Users of METAGEN.AI with roles, bans, and credits balance metadata."
+    },
     "/scans/{scanId}": {
       "schema": "ScanRecord",
       "description": "History of generated image metadata records."

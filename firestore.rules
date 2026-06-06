@@ -44,8 +44,16 @@ service cloud.firestore {
       allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
       allow list: if isAdmin();
       
-      allow create, update: if (isSignedIn() && isOwner(userId) && isValidUserProfile(incoming()))
-        || isAdmin();
+      allow create: if (isSignedIn() && isOwner(userId) && isValidUserProfile(incoming()) && (
+        incoming().points == 100
+      )) || isAdmin();
+
+      allow update: if (isSignedIn() && isOwner(userId) && isValidUserProfile(incoming()) && (
+        (incoming().points == existing().points - 1) ||
+        (incoming().points == existing().points + 50 && incoming().lastDailyReset != existing().lastDailyReset) ||
+        (incoming().points == existing().points) ||
+        (!('points' in existing()) && incoming().points == 100)
+      )) || isAdmin();
     }
 
     // Validation Blueprint for ImageMetadata
@@ -54,13 +62,16 @@ service cloud.firestore {
         && data.keys().size() == 9
         && data.file_name is string && data.file_name.size() < 256
         && data.title is string && data.title.size() < 256
-        && data.description is string && data.description.size() < 1000
-        && data.keywords is list && data.keywords.size() <= 30
-        && data.category is string
-        && data.dominant_colors is list
-        && data.objects_detected is list
-        && data.mood is string
-        && data.usage_suggestions is string;
+        && data.description is string && data.description.size() < 2000
+        && data.keywords is list && data.keywords.size() >= 5 && data.keywords.size() <= 55
+        && data.category is string && data.category.size() < 100
+        && data.dominant_colors is list && data.dominant_colors.size() <= 20
+        && data.objects_detected is list && data.objects_detected.size() <= 50
+        && data.mood is string && data.mood.size() < 100
+        && data.usage_suggestions is string && data.usage_suggestions.size() < 1000
+        && (data.keywords.size() == 0 || data.keywords[0] is string)
+        && (data.dominant_colors.size() == 0 || data.dominant_colors[0] is string)
+        && (data.objects_detected.size() == 0 || data.objects_detected[0] is string);
     }
 
     // Validation Blueprint for ScanRecord

@@ -2,5 +2,7 @@
   "name": "AI Image Metadata Generator",
   "description": "Generate structured JSON and CSV metadata for images using Google Gemini AI with a futuristic gaming-inspired UI.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

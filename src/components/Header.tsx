@@ -67,6 +67,14 @@ export const Header: React.FC<HeaderProps> = ({ user, userProfile, onOpenSetting
 
           {user ? (
             <div className="flex items-center gap-1.5 sm:gap-3">
+               <div className="flex flex-col items-end bg-cyan-500/5 border border-cyan-500/10 px-2.5 py-1 rounded-lg">
+                  <span className="text-[10px] text-cyan-400 font-black tracking-wider flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse shadow-[0_0_8.0px_#00f3ff]" />
+                    {userProfile?.points !== undefined ? userProfile.points : 100} PTS
+                  </span>
+                  <span className="text-[8px] text-gray-400/80 font-mono tracking-widest">CREDITS</span>
+               </div>
+
                <div className="hidden lg:flex flex-col items-end">
                   <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">Authenticated</span>
                   <span className="text-xs text-white max-w-[100px] truncate">{user.displayName || user.email}</span>

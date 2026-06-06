@@ -6,6 +6,7 @@ import { MetadataDisplay } from './components/MetadataDisplay';
 import { SettingsModal } from './components/SettingsModal';
 import { AdminPanel } from './components/AdminPanel';
 import { AboutUs } from './components/AboutUs';
+import { WelcomePopup } from './components/WelcomePopup';
 import { ApiErrorPopup } from './components/ApiErrorPopup';
 import { AdBanner } from './components/AdBanner';
 import { Footer } from './components/Footer';
@@ -15,9 +16,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Trash2, Play, Download, History as HistoryIcon, Camera, AlertTriangle, Lock, ShieldAlert, LogOut } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { cn } from './lib/utils';
-import { auth, db, handleFirestoreError, OperationType, signInWithGoogle, logout } from './lib/firebase';
+import { auth, db, handleFirestoreError, OperationType, signInWithGoogle, logout, getResetCycleDateStr } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, Timestamp, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc } from 'firebase/firestore';
 
 export default function App() {
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -28,6 +29,7 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
   const [apiErrorType, setApiErrorType] = useState<'quota_exceeded' | 'invalid_key' | 'general' | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -41,6 +43,15 @@ export default function App() {
     setTitleLength(70);
     setKeywordCount(35);
   };
+
+  // First Visit Welcome Popup Trigger
+  useEffect(() => {
+    const hasVisited = localStorage.getItem('metagen_has_visited');
+    if (!hasVisited) {
+      setIsWelcomeOpen(true);
+      localStorage.setItem('metagen_has_visited', 'true');
+    }
+  }, []);
 
   // Session expiry check
   useEffect(() => {
@@ -75,9 +86,30 @@ export default function App() {
       if (user) {
         // Sync user profile for ban/role check
         const profileRef = doc(db, 'users', user.uid);
-        unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
+        unsubscribeProfile = onSnapshot(profileRef, async (docSnap) => {
           if (docSnap.exists()) {
-            setUserProfile(docSnap.data() as UserProfile);
+            const data = docSnap.data() as UserProfile;
+            try {
+              const currentResetCycle = getResetCycleDateStr();
+              const dbResetCycle = data.lastDailyReset || "";
+              
+              if (dbResetCycle !== currentResetCycle) {
+                const dbPoints = data.points !== undefined ? data.points : 100;
+                const newPoints = dbPoints + 50;
+                
+                await updateDoc(doc(db, 'users', user.uid), {
+                  points: newPoints,
+                  lastDailyReset: currentResetCycle,
+                  updatedAt: serverTimestamp()
+                });
+                console.log(`Daily 6:00 AM points reset completed! New balance: ${newPoints}`);
+              } else {
+                setUserProfile(data);
+              }
+            } catch (err) {
+              console.error("Failed to run daily points check:", err);
+              setUserProfile(data);
+            }
           }
           setAuthLoading(false);
         }, (err) => {
@@ -120,7 +152,16 @@ export default function App() {
         const savedHistory = localStorage.getItem('metagen_history');
         if (savedHistory) {
           try {
-            setHistory(JSON.parse(savedHistory));
+            const parsed = JSON.parse(savedHistory);
+            if (Array.isArray(parsed)) {
+              // Deduplicate saved items to prevent any duplicate key errors on load
+              const uniqueHistory = parsed.filter((item, index, self) =>
+                self.findIndex(t => t.id === item.id) === index
+              );
+              setHistory(uniqueHistory);
+            } else {
+              setHistory([]);
+            }
           } catch (e) {
             console.error("Failed to load history", e);
           }
@@ -182,12 +223,29 @@ export default function App() {
         return;
     }
 
+    const pendingFiles = files.filter(f => f.status !== 'completed');
+    if (pendingFiles.length === 0) return;
+
+    const userPoints = userProfile?.points !== undefined ? userProfile.points : 100;
+    if (currentUser && userPoints < 1) {
+      alert("Insufficient Points! Your points balance is 0. Please wait for the daily 6:00 AM reset (+50 pts) or contact admin.");
+      return;
+    }
+
     setIsProcessing(true);
 
     const updatedFiles = [...files];
+    let pointsRem = userPoints;
     
     for (let i = 0; i < updatedFiles.length; i++) {
         if (updatedFiles[i].status === 'completed') continue;
+
+        if (currentUser && pointsRem < 1) {
+          updatedFiles[i].status = 'error';
+          updatedFiles[i].error = "Insufficient points remaining.";
+          setFiles([...updatedFiles]);
+          continue;
+        }
 
         try {
             updatedFiles[i].status = 'processing';
@@ -200,6 +258,15 @@ export default function App() {
             updatedFiles[i].progress = 100;
             updatedFiles[i].metadata = metadata;
             setFiles([...updatedFiles]);
+
+            if (currentUser) {
+              pointsRem -= 1;
+              const userRef = doc(db, 'users', currentUser.uid);
+              await updateDoc(userRef, {
+                points: pointsRem,
+                updatedAt: serverTimestamp()
+              });
+            }
         } catch (error: any) {
             console.error(error);
             updatedFiles[i].status = 'error';
@@ -242,8 +309,9 @@ export default function App() {
                 }
             }
         } else {
-            // Save to Local Storage for guests
-            const newHistory = [...completed, ...history].slice(0, 50);
+            // Save to Local Storage for guests - Filter out files already in history to prevent duplicates
+            const newIncoming = completed.filter(c => !history.some(h => h.id === c.id));
+            const newHistory = [...newIncoming, ...history].slice(0, 50);
             setHistory(newHistory);
             localStorage.setItem('metagen_history', JSON.stringify(newHistory));
         }
@@ -646,6 +714,9 @@ export default function App() {
         )}
         {isAboutOpen && (
           <AboutUs isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+        )}
+        {isWelcomeOpen && (
+          <WelcomePopup isOpen={isWelcomeOpen} onClose={() => setIsWelcomeOpen(false)} />
         )}
         <ApiErrorPopup 
           isOpen={!!apiErrorType} 
