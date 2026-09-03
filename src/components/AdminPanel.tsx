@@ -6,6 +6,22 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Shield, UserX, UserCheck, Search, AlertOctagon, X, Clock, Mail, Globe } from 'lucide-react';
 import { format } from 'date-fns';
 
+const formatDateSafe = (dateVal: any): string => {
+  if (!dateVal) return 'N/A';
+  try {
+    if (typeof dateVal?.toDate === 'function') {
+      return format(dateVal.toDate(), 'yyyy-MM-dd HH:mm');
+    }
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      return format(d, 'yyyy-MM-dd HH:mm');
+    }
+  } catch (e) {
+    // fallback
+  }
+  return 'N/A';
+};
+
 export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +40,7 @@ export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       setUsers(userList);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'users');
+      console.warn("Could not load users list from Firestore:", error);
       setLoading(false);
     });
 
@@ -226,7 +242,7 @@ export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-mono">
                           <Clock className="w-3 h-3" />
-                          {user.lastLogin ? format(user.lastLogin.toDate(), 'yyyy-MM-dd HH:mm') : 'N/A'}
+                          {formatDateSafe(user.lastLogin)}
                         </div>
                         {user.domain && (
                           <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-mono lowercase">

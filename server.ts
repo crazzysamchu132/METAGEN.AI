@@ -71,28 +71,57 @@ async function startServer() {
         ]
       };
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [
-          {
-            inlineData: {
-              mimeType,
-              data: image,
+      const requestedModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: requestedModel,
+          contents: [
+            {
+              inlineData: {
+                mimeType,
+                data: image,
+              },
             },
-          },
-          {
-            text: `Analyze this image for Adobe Stock. 
+            {
+              text: `Analyze this image for Adobe Stock. 
 Generate a commercially viable, SEO-optimized title (max ${titleLength} characters).
 Generate exactly ${keywordCount} high-relevance keywords (min 5, max 50). 
 Keywords must be in order of relevance, lowercase, and unique. 
 Ensure the metadata is professional and suitable for stock photography.`,
+            },
+          ],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: METADATA_SCHEMA,
           },
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: METADATA_SCHEMA,
-        },
-      });
+        });
+      } catch (genErr: any) {
+        // If the primary model fails or is unavailable, attempt fallback
+        console.warn(`Model ${requestedModel} failed, trying fallback model...`, genErr.message);
+        response = await ai.models.generateContent({
+          model: "gemini-3.8-flash",
+          contents: [
+            {
+              inlineData: {
+                mimeType,
+                data: image,
+              },
+            },
+            {
+              text: `Analyze this image for Adobe Stock. 
+Generate a commercially viable, SEO-optimized title (max ${titleLength} characters).
+Generate exactly ${keywordCount} high-relevance keywords (min 5, max 50). 
+Keywords must be in order of relevance, lowercase, and unique. 
+Ensure the metadata is professional and suitable for stock photography.`,
+            },
+          ],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: METADATA_SCHEMA,
+          },
+        });
+      }
 
       if (!response.text) {
         throw new Error("No response from AI");

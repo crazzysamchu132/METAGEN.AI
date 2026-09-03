@@ -122,32 +122,40 @@ export default function App() {
         if (isNewLogin) {
           console.log("Welcome back, ", user.displayName);
         }
-        // Sync history from Firestore
+        // Sync history from Firestore (query by userId without requiring composite index)
         const q = query(
           collection(db, 'scans'),
           where('userId', '==', user.uid),
-          orderBy('createdAt', 'desc'),
           limit(50)
         );
 
         const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
           const items = snapshot.docs.map((doc, idx) => {
             const data = doc.data();
+            const createdAtMillis = data.createdAt?.toMillis 
+              ? data.createdAt.toMillis() 
+              : (data.createdAt?.seconds ? data.createdAt.seconds * 1000 : 0);
+
             return {
               id: doc.id || `firestore-${idx}-${Date.now()}`,
               status: 'completed',
               progress: 100,
               metadata: data.metadata,
-              preview: data.imageUrl || '', // We don't store real binary in firestore usually, but we could store a placeholder or thumbnail if we had storage
-              file: new File([], data.metadata?.file_name || 'historical_file.jpg') // Mock file for historical items
-            } as UploadedFile;
+              preview: data.imageUrl || '',
+              file: new File([], data.metadata?.file_name || 'historical_file.jpg'),
+              createdAtMillis
+            } as UploadedFile & { createdAtMillis?: number };
           });
+
+          // Sort descending by creation date in memory
+          items.sort((a, b) => (b.createdAtMillis || 0) - (a.createdAtMillis || 0));
+
           const uniqueItems = items.filter((item, index, self) =>
             self.findIndex(t => t.id === item.id) === index
           );
           setHistory(uniqueItems);
         }, (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'scans');
+          console.warn("Could not sync scan history from Firestore:", error);
         });
 
         return () => unsubscribeFirestore();

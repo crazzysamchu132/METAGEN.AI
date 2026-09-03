@@ -45,18 +45,6 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
-    }
-  }
-}
-
-testConnection();
-
 export const ADMIN_EMAIL = 'sajewel132@gmail.com';
 export const ADMIN_UID = 'HI7LPBRcuLMRpk8D2i4WJLlT00n2';
 
