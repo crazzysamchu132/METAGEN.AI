@@ -184,8 +184,8 @@ export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.uid} className="group bg-white/5 hover:bg-white/10 transition-colors rounded-xl overflow-hidden">
+                {filteredUsers.map((user, uIdx) => (
+                  <tr key={user.uid ? `admin-user-${user.uid}` : `admin-user-idx-${uIdx}`} className="group bg-white/5 hover:bg-white/10 transition-colors rounded-xl overflow-hidden">
                     <td className="px-4 py-3 first:rounded-l-xl">
                       <div className="flex items-center gap-3">
                         <img 
@@ -331,7 +331,7 @@ export const AdminPanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       {/* Ban Reason Modal */}
       <AnimatePresence>
         {banModalUser && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+          <div key="ban-reason-modal-overlay" className="fixed inset-0 z-[110] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

@@ -12,6 +12,7 @@ export const WelcomePopup: React.FC<WelcomePopupProps> = ({ isOpen, onClose }) =
     <AnimatePresence>
       {isOpen && (
         <div 
+          key="welcome-popup-modal"
           id="welcome-popup-overlay"
           className="fixed inset-0 z-[120] flex items-center justify-center p-4"
         >

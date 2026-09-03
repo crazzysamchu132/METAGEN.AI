@@ -231,6 +231,7 @@ export const UserManual: React.FC = () => {
                 <AnimatePresence>
                   {isCurrentlyExpanded && (
                     <motion.div
+                      key={`manual-section-${section.id}`}
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
@@ -250,7 +251,7 @@ export const UserManual: React.FC = () => {
                           </h4>
                           <div className="space-y-2.5">
                             {section.steps.map((step, idx) => (
-                              <div key={idx} className="flex gap-3 text-xs leading-relaxed text-gray-300">
+                              <div key={`step-${section.id}-${idx}`} className="flex gap-3 text-xs leading-relaxed text-gray-300">
                                 <span className="font-mono text-cyan-500 bg-cyan-950/30 border border-cyan-500/20 w-5 h-5 flex items-center justify-center rounded shrink-0 text-[10px] font-black">
                                   {idx + 1}
                                 </span>

@@ -13,9 +13,9 @@ export const ImageGrid: React.FC<ImageGridProps> = ({ files, onRemove }) => {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
       <AnimatePresence initial={false}>
-        {files.map((item) => (
+        {files.map((item, idx) => (
           <motion.div
-            key={item.id}
+            key={item.id ? `img-grid-${item.id}` : `img-grid-idx-${idx}`}
             layout
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}

@@ -131,18 +131,21 @@ export default function App() {
         );
 
         const unsubscribeFirestore = onSnapshot(q, (snapshot) => {
-          const items = snapshot.docs.map(doc => {
+          const items = snapshot.docs.map((doc, idx) => {
             const data = doc.data();
             return {
-              id: doc.id,
+              id: doc.id || `firestore-${idx}-${Date.now()}`,
               status: 'completed',
               progress: 100,
               metadata: data.metadata,
               preview: data.imageUrl || '', // We don't store real binary in firestore usually, but we could store a placeholder or thumbnail if we had storage
-              file: new File([], data.metadata.file_name) // Mock file for historical items
+              file: new File([], data.metadata?.file_name || 'historical_file.jpg') // Mock file for historical items
             } as UploadedFile;
           });
-          setHistory(items);
+          const uniqueItems = items.filter((item, index, self) =>
+            self.findIndex(t => t.id === item.id) === index
+          );
+          setHistory(uniqueItems);
         }, (error) => {
           handleFirestoreError(error, OperationType.LIST, 'scans');
         });
@@ -156,8 +159,12 @@ export default function App() {
           try {
             const parsed = JSON.parse(savedHistory);
             if (Array.isArray(parsed)) {
-              // Deduplicate saved items to prevent any duplicate key errors on load
-              const uniqueHistory = parsed.filter((item, index, self) =>
+              // Ensure valid unique id for each item and deduplicate
+              const sanitized = parsed.map((item: any, idx: number) => ({
+                ...item,
+                id: item.id || `guest-history-${idx}-${Date.now()}`
+              }));
+              const uniqueHistory = sanitized.filter((item, index, self) =>
                 self.findIndex(t => t.id === item.id) === index
               );
               setHistory(uniqueHistory);
@@ -192,8 +199,8 @@ export default function App() {
       setSessionStartTime(Date.now());
     }
 
-    const uploadedFiles: UploadedFile[] = newFiles.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
+    const uploadedFiles: UploadedFile[] = newFiles.map((file, idx) => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}-${idx}`,
       file,
       preview: URL.createObjectURL(file),
       status: 'pending',
@@ -313,7 +320,9 @@ export default function App() {
         } else {
             // Save to Local Storage for guests - Filter out files already in history to prevent duplicates
             const newIncoming = completed.filter(c => !history.some(h => h.id === c.id));
-            const newHistory = [...newIncoming, ...history].slice(0, 50);
+            const newHistory = [...newIncoming, ...history].filter((item, index, self) =>
+              self.findIndex(t => t.id === item.id) === index
+            ).slice(0, 50);
             setHistory(newHistory);
             localStorage.setItem('metagen_history', JSON.stringify(newHistory));
         }
@@ -718,8 +727,10 @@ export default function App() {
                   <AnimatePresence>
                     {files.some(f => f.status === 'completed') && (
                       <motion.section
+                        key="analysis-results-section"
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 30 }}
                         className="space-y-6"
                       >
                         <div className="flex items-center justify-between uppercase tracking-widest text-xs font-black text-cyan-400">
@@ -798,21 +809,17 @@ export default function App() {
       
       <AnimatePresence>
         {isAdminOpen && (
-          <AdminPanel onClose={() => setIsAdminOpen(false)} />
+          <AdminPanel key="admin-panel-overlay" onClose={() => setIsAdminOpen(false)} />
         )}
-        {isAboutOpen && (
-          <AboutUs isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
-        )}
-        {isWelcomeOpen && (
-          <WelcomePopup isOpen={isWelcomeOpen} onClose={() => setIsWelcomeOpen(false)} />
-        )}
-        <ApiErrorPopup 
-          isOpen={!!apiErrorType} 
-          onClose={() => setApiErrorType(null)} 
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          errorType={apiErrorType || 'general'}
-        />
       </AnimatePresence>
+      <AboutUs isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
+      <WelcomePopup isOpen={isWelcomeOpen} onClose={() => setIsWelcomeOpen(false)} />
+      <ApiErrorPopup 
+        isOpen={!!apiErrorType} 
+        onClose={() => setApiErrorType(null)} 
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        errorType={apiErrorType || 'general'}
+      />
 
     </div>
   );

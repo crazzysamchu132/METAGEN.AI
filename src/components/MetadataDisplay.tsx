@@ -201,7 +201,7 @@ export const MetadataDisplay: React.FC<MetadataDisplayProps> = ({ files, onUpdat
           </button>
         </div>
       )}
-      {files.map((file) => {
+      {files.map((file, fileIdx) => {
         if (!file.metadata) return null;
         const isExpanded = expandedId === file.id;
         const m = file.metadata;
@@ -211,7 +211,7 @@ export const MetadataDisplay: React.FC<MetadataDisplayProps> = ({ files, onUpdat
 
         return (
           <motion.div
-            key={file.id}
+            key={file.id ? `metadata-card-${file.id}` : `metadata-card-idx-${fileIdx}`}
             layout
             className={cn(
                 "glass-panel overflow-hidden transition-all duration-300",
@@ -267,6 +267,7 @@ export const MetadataDisplay: React.FC<MetadataDisplayProps> = ({ files, onUpdat
             <AnimatePresence>
               {isExpanded && (
                 <motion.div
+                  key={`seo-workspace-${file.id || fileIdx}`}
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
